@@ -13,10 +13,14 @@ document.body.appendChild(domBuilder([
   ["form",
     {onsubmit: wrap(function (evt) {
       evt.preventDefault();
-      clone(this.url.value);
+      clone(this.url.value, this.sideband.checked);
     })},
     ["input", {name: "url", value: "git://github.com/creationix/conquest.git"}],
-    ["input", {type:"submit", value: "Clone!"}]
+    ["input", {type:"submit", value: "Clone!"}],
+    ["label",
+      ["input", {type:"checkbox", name:"sideband"}],
+      "Include side-band support",
+    ]
   ]
 ]));
 
@@ -65,7 +69,7 @@ function parseUrl(url) {
   throw new SyntaxError("Invalid url: " + url);
 }
 
-function clone(url) {
+function clone(url, sideband) {
   url = parseUrl(url);
   log("Parsed Url", url);
   tcp.connect(url.host, url.port, check(function (socket) {
@@ -78,8 +82,8 @@ function clone(url) {
       pktLine.framer,
       socket.sink
     ]);
-    
-    
+
+
   }));
 
 
@@ -94,11 +98,13 @@ function clone(url) {
           log({refs:refs,caps:caps});
           var clientCaps = [
             // "multi_ack_detailed",
-            "side-band-64k",
             // "thin-pack",
             // "ofs-delta",
             "agent=js-git/0.0.0"
           ];
+          if (sideband) {
+            clientCaps.push("side-band-64k");
+          }
           emit(null, pktLine.encode(["want", refs.HEAD].concat(clientCaps)));
           // emit(null, pktLine.encode(["want", refs["refs/heads/master"]]));
           emit(null, null);
