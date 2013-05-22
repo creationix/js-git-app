@@ -1,6 +1,10 @@
+/*global chrome*/
+"use strict";
+
 chrome.app.runtime.onLaunched.addListener(function() {
   chrome.app.window.create('/index.html', {
-    'width': 800,
-    'height': 600
+    id: "js-git-app-main",
+
   });
+
 });
