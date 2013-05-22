@@ -90,11 +90,11 @@ function clone(url) {
     var caps;
     var states = {
       "ref-discovery": function (message) {
-        if (message === null) {
+        if (message[1] === null) {
           log({refs:refs,caps:caps});
           var clientCaps = [
             // "multi_ack_detailed",
-            // "side-band-64k",
+            "side-band-64k",
             // "thin-pack",
             // "ofs-delta",
             "agent=js-git/0.0.0"
@@ -106,7 +106,7 @@ function clone(url) {
           state = "pack";
           return;
         }
-        message = pktLine.decode(message);
+        message = pktLine.decode(message[1]);
         if (message.caps) {
           caps = message.caps;
           delete message.caps;
