@@ -6,6 +6,7 @@ var domBuilder = require('dombuilder');
 var pktLine = require('min-stream-pkt-line');
 var log = require('domlog');
 var bops = require('bops');
+window.log = log;
 
 document.body.innerText = "";
 document.body.appendChild(domBuilder([
@@ -78,59 +79,39 @@ function clone(url, sideband) {
     helpers.run([
       socket.source,
       pktLine.deframer,
+      // helpers.mapToPull(function (item) {
+      //   log("<-", item);
+      //   return item;
+      // }),
       app,
+      // helpers.mapToPull(function (item) {
+      //   log("->", item);
+      //   return item;
+      // }),
       pktLine.framer,
       socket.sink
     ]);
 
-
   }));
 
 
-  app.is = "min-stream-push-filter";
-  function app(emit) {
-    var state = "ref-discovery";
-    var refs = {};
-    var caps;
-    var states = {
-      "ref-discovery": function (message) {
-        if (message[1] === null) {
-          log({refs:refs,caps:caps});
-          var clientCaps = [
-            // "multi_ack_detailed",
-            // "thin-pack",
-            // "ofs-delta",
-            "agent=js-git/0.0.0"
-          ];
-          if (sideband) {
-            clientCaps.push("side-band-64k");
-          }
-          emit(null, pktLine.encode(["want", refs.HEAD].concat(clientCaps)));
-          // emit(null, pktLine.encode(["want", refs["refs/heads/master"]]));
-          emit(null, null);
-          emit(null, pktLine.encode(["done"]));
-          state = "pack";
-          return;
-        }
-        message = pktLine.decode(message[1]);
-        if (message.caps) {
-          caps = message.caps;
-          delete message.caps;
-        }
-        refs[message[1]] = message[0];
-      },
-      "pack": function (message) {
-        // throw new Error
-      }
-    };
-    log("Sending git-upload-pack command");
-    emit(null, pktLine.encode(["git-upload-pack", url.path], {host: url.host}, true));
-    return wrap(function (err, item) {
-      if (err) log(err);
-      if (item === undefined) return emit(err);
-      log(state, item);
-      states[state](item);
+  app.is = "min-stream-pull-filter";
+  function app(read) {
+    
+    var sources = helpers.demultiplexer(["line", "pack", "progress", "error"],
+      read
+    );
+    
+    helpers.sink(log)(sources.line);
+    
+    var output = helpers.source();
+    
+    output.write(null, pktLine.encode(["git-upload-pack", url.path], {host: url.host}, true));
+    sources.line(null, function (err, item) {
+      log({err:err,item:item});
     });
+    
+    return output;
   }
 
 
