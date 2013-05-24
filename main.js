@@ -1,7 +1,8 @@
 "use strict";
 
-var tcp = require('min-stream-chrome');
-var min = require('min-stream');
+var tcp = require('min-stream-chrome/tcp.js');
+var chain = require('min-stream/chain.js');
+var demux = require('min-stream/demux.js');
 var domBuilder = require('dombuilder');
 var pktLine = require('min-stream-pkt-line');
 var log = require('domlog');
@@ -78,7 +79,7 @@ function clone(url, sideband) {
 
     log("Connected to server");
 
-    min.chain
+    chain
       .source(socket.source)
       .map(logger("<"))
       .push(pktLine.deframer)
@@ -93,7 +94,7 @@ function clone(url, sideband) {
 
   function app(read) {
 
-    var sources = min.demux(["line", "pack", "progress", "error"], read);
+    var sources = demux(["line", "pack", "progress", "error"], read);
 
     var output = tube();
 
