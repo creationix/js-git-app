@@ -7,8 +7,8 @@
     "min-stream": "~0.0.3",
     "min-stream-chrome": "~0.0.5",
     "dombuilder": "~0.1.2",
-    "domlog": "~0.0.5",
-    "min-stream-pkt-line": "~0.0.5",
+    "domlog": "~0.0.6",
+    "min-stream-pkt-line": "~0.0.6",
     "bops": "~0.0.6"
   }
 }

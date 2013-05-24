@@ -16,10 +16,10 @@ document.body.appendChild(domBuilder([
       evt.preventDefault();
       clone(this.url.value, this.sideband.checked);
     })},
-    ["input", {name: "url", value: "git://github.com/creationix/conquest.git"}],
+    ["input", {name: "url", size: 50, value: "git://github.com/creationix/conquest.git"}],
     ["input", {type:"submit", value: "Clone!"}],
     ["label",
-      ["input", {type:"checkbox", name:"sideband"}],
+      ["input", {type:"checkbox", checked:true, name:"sideband"}],
       "Include side-band support",
     ]
   ]
@@ -71,9 +71,12 @@ function parseUrl(url) {
 }
 
 function clone(url, sideband) {
+  log.container.textContent = "";
   url = parseUrl(url);
   log("Parsed Url", url);
   tcp.connect(url.host, url.port, check(function (socket) {
+
+    log("Connected to server");
 
     min.chain
       .source(socket.source)
@@ -85,25 +88,48 @@ function clone(url, sideband) {
       .push(pktLine.framer)
       .map(logger(">"))
       .sink(socket.sink);
-
-    log("Connected to server");
-
   }));
 
 
   function app(read) {
 
-    var sources = min.demux(["line", "pack", "progress", "error"],
-      read
-    );
-
-    min.consume(sources.line, log);
+    var sources = min.demux(["line", "pack", "progress", "error"], read);
 
     var output = tube();
 
+    log("Sending upload-pack request...");
     output.write(null, pktLine.encode(["git-upload-pack", url.path], {host: url.host}, true));
-    sources.line(null, function (err, item) {
-      log({err:err,item:item});
+
+    var refs = {};
+    var caps;
+
+    consumeTill(sources.line, function (item) {
+      if (item) {
+        item = pktLine.decode(item);
+        if (item.caps) caps = item.caps;
+        refs[item[1]] = item[0];
+        return true;
+      }
+    }, function (err) {
+      if (err) return log(err);
+      log({caps:caps,refs:refs});
+      var clientCaps = {};
+      if (sideband) {
+        if (caps["side-band-64k"]) {
+          clientCaps["side-band-64k"] = true;
+        }
+        else if (caps["side-band"]) {
+          clientCaps["side-band"] = true;
+        }
+      }
+      output.write(null, ["want", refs.HEAD, pktLine.capList(clientCaps)].join(" ") + "\n");
+      output.write(null, null);
+      output.write(null, "done");
+
+      devNull(sources.line);
+      devNull(sources.pack);
+      devNull(sources.progress);
+      devNull(sources.error);
     });
 
     return output;
@@ -113,32 +139,43 @@ function clone(url, sideband) {
 
 function logger(message) {
   return function (item) {
-    log([message, item]);
+    log(message, item);
     return item;
   };
+}
+
+// Eat all events in a stream
+function devNull(read) {
+  read(null, onRead);
+  function onRead(err, item) {
+    if (err) log(err);
+    else if (item !== undefined) read(null, onRead);
+  }
+}
+
+function consumeTill(read, check, callback) {
+  read(null, onRead);
+  function onRead(err, item) {
+    if (item === undefined) {
+      if (err) return callback(err);
+      return callback();
+    }
+    if (!check(item)) return callback();
+    read(null, onRead);
+  }
 }
 
 function tube() {
   var dataQueue = [];
   var readQueue = [];
-  var callbackList = [];
   var closed;
   function check() {
     while (!closed && readQueue.length && dataQueue.length) {
       readQueue.shift().apply(null, dataQueue.shift());
     }
-    if (callbackList.length && !dataQueue.length) {
-      var callbacks = callbackList;
-      callbackList = [];
-      callbacks.forEach(function (callback) {
-        callback(closed === true ? null : closed);
-      });
-    }
   }
-  function write(err, item, callback) {
-    if (closed) return callback && callback(closed === true ? null : closed);
+  function write(err, item) {
     dataQueue.push([err, item]);
-    if (callback) callbackList.push(callback);
     check();
   }
   function read(close, callback) {
