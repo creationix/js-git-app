@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "dependencies": {
     "chrome-app-module-loader": "~0.0.1",
+    "min-stream": "~0.0.3",
     "min-stream-chrome": "~0.0.5",
-    "min-stream-helpers": "~0.0.4",
     "dombuilder": "~0.1.2",
     "domlog": "~0.0.5",
     "min-stream-pkt-line": "~0.0.5",

@@ -1,7 +1,7 @@
 "use strict";
 
 var tcp = require('min-stream-chrome');
-var helpers = require('min-stream-helpers');
+var min = require('min-stream');
 var domBuilder = require('dombuilder');
 var pktLine = require('min-stream-pkt-line');
 var log = require('domlog');
@@ -75,46 +75,81 @@ function clone(url, sideband) {
   log("Parsed Url", url);
   tcp.connect(url.host, url.port, check(function (socket) {
 
+    min.chain
+      .source(socket.source)
+      .map(logger("<"))
+      .push(pktLine.deframer)
+      .map(logger("<-"))
+      .pull(app)
+      .map(logger("->"))
+      .push(pktLine.framer)
+      .map(logger(">"))
+      .sink(socket.sink);
+
     log("Connected to server");
-    helpers.run([
-      socket.source,
-      pktLine.deframer,
-      // helpers.mapToPull(function (item) {
-      //   log("<-", item);
-      //   return item;
-      // }),
-      app,
-      // helpers.mapToPull(function (item) {
-      //   log("->", item);
-      //   return item;
-      // }),
-      pktLine.framer,
-      socket.sink
-    ]);
 
   }));
 
 
-  app.is = "min-stream-pull-filter";
   function app(read) {
-    
-    var sources = helpers.demultiplexer(["line", "pack", "progress", "error"],
+
+    var sources = min.demux(["line", "pack", "progress", "error"],
       read
     );
-    
-    helpers.sink(log)(sources.line);
-    
-    var output = helpers.source();
-    
+
+    min.consume(sources.line, log);
+
+    var output = tube();
+
     output.write(null, pktLine.encode(["git-upload-pack", url.path], {host: url.host}, true));
     sources.line(null, function (err, item) {
       log({err:err,item:item});
     });
-    
+
     return output;
   }
 
-
-
 }
 
+function logger(message) {
+  return function (item) {
+    log([message, item]);
+    return item;
+  };
+}
+
+function tube() {
+  var dataQueue = [];
+  var readQueue = [];
+  var callbackList = [];
+  var closed;
+  function check() {
+    while (!closed && readQueue.length && dataQueue.length) {
+      readQueue.shift().apply(null, dataQueue.shift());
+    }
+    if (callbackList.length && !dataQueue.length) {
+      var callbacks = callbackList;
+      callbackList = [];
+      callbacks.forEach(function (callback) {
+        callback(closed === true ? null : closed);
+      });
+    }
+  }
+  function write(err, item, callback) {
+    if (closed) return callback && callback(closed === true ? null : closed);
+    dataQueue.push([err, item]);
+    if (callback) callbackList.push(callback);
+    check();
+  }
+  function read(close, callback) {
+    if (closed) return callback(closed === true ? null : closed);
+    if (close) {
+      closed = close;
+      return callback();
+    }
+    readQueue.push(callback);
+    check();
+  }
+  read.write = write;
+  return read;
+}
