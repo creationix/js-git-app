@@ -5,11 +5,13 @@
   "dependencies": {
     "js-git": "*",
     "chrome-app-module-loader": "~0.0.1",
-    "min-stream": "~0.0.3",
+    "min-stream": "~0.0.4",
     "min-stream-chrome": "~0.0.5",
     "dombuilder": "~0.1.2",
     "domlog": "~0.0.6",
     "min-stream-pkt-line": "~0.0.6",
-    "bops": "~0.0.6"
+    "bops": "~0.0.6",
+    "to-utf8": "0.0.1",
+    "base64-js": "0.0.2"
   }
 }
