@@ -83,13 +83,13 @@ function clone(url, sideband) {
 
     chain
       .source(socket.source)
-      .map(logger("<"))
+//      .map(logger("<"))
       .push(pktLine.deframer)
-      .map(logger("<-"))
+//      .map(logger("<-"))
       .pull(app)
-      .map(logger("->"))
+//      .map(logger("->"))
       .push(pktLine.framer)
-      .map(logger(">"))
+//      .map(logger(">"))
       .sink(socket.sink);
   }));
 
@@ -115,7 +115,8 @@ function clone(url, sideband) {
       }
     }, function (err) {
       if (err) return log(err);
-      log({caps:caps,refs:refs});
+      log("server capabilities", caps);
+      log("remote refs", refs);
       var clientCaps = [];
       if (sideband) {
         if (caps["side-band-64k"]) {
@@ -125,6 +126,7 @@ function clone(url, sideband) {
           clientCaps.push("side-band");
         }
       }
+      log("Asking for HEAD", refs.HEAD)
       output.write(null, ["want", refs.HEAD].concat(clientCaps).join(" ") + "\n");
       output.write(null, null);
       output.write(null, "done");
@@ -132,7 +134,7 @@ function clone(url, sideband) {
       chain
         .source(sources.pack)
         .pull(listPack)
-        .map(logger('list-pack'))
+        .map(logger('raw-object'))
         // .pull(objectify(find))
         // .map(logger('object'))
         .sink(devNull);
