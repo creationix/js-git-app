@@ -5,7 +5,8 @@ var chain = require('min-stream/chain.js');
 var demux = require('min-stream/demux.js');
 var domBuilder = require('dombuilder');
 var pktLine = require('js-git/pkt-line.js');
-var listPack = require('js-git/list-pack.js');
+var listPack = require('git-list-pack/min.js');
+// var objectify = require('git-objectify-pack');
 var log = require('domlog');
 window.log = log;
 
@@ -130,19 +131,26 @@ function clone(url, sideband) {
       
       chain
         .source(sources.pack)
-        .map(logger('list-pack1'))
-        .push(listPack)
-        .map(logger('list-pack2'))
+        .pull(listPack)
+        .map(logger('list-pack'))
+        // .pull(objectify(find))
+        // .map(logger('object'))
         .sink(devNull);
 
-      // devNull(sources.line);
-      // devNull(sources.progress);
-      // devNull(sources.error);
+      devNull(sources.line);
+      devNull(sources.progress);
+      devNull(sources.error);
     });
 
     return output;
   }
 
+}
+
+function find(oid, ready) {
+  var err = new Error("Can't find oid: " + oid);
+  log(err);
+  ready(err);
 }
 
 function logger(message) {
