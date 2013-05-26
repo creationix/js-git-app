@@ -4,14 +4,14 @@ var tcp = require('min-stream-chrome/tcp.js');
 var chain = require('min-stream/chain.js');
 var demux = require('min-stream/demux.js');
 var domBuilder = require('dombuilder');
-var pktLine = require('min-stream-pkt-line');
+var pktLine = require('js-git/pkt-line.js');
+var listPack = require('js-git/list-pack.js');
 var log = require('domlog');
-var bops = require('bops');
 window.log = log;
 
 document.body.innerText = "";
 document.body.appendChild(domBuilder([
-  ["h1", "JS-Git Chrome App"],
+  ["h1", "JS-Git ChromeApp"],
   ["form",
     {onsubmit: wrap(function (evt) {
       evt.preventDefault();
@@ -35,6 +35,7 @@ log.setup({
 // Wrap a function in one that redirects exceptions.
 // Use for all event-source handlers.
 function wrap(fn) {
+
   return function () {
     try {
       return fn.apply(this, arguments);
@@ -99,14 +100,14 @@ function clone(url, sideband) {
     var output = tube();
 
     log("Sending upload-pack request...");
-    output.write(null, pktLine.encode(["git-upload-pack", url.path], {host: url.host}, true));
+    output.write(null, "git-upload-pack " + url.path + "\0host=" + url.host + "\0");
 
     var refs = {};
     var caps;
 
     consumeTill(sources.line, function (item) {
       if (item) {
-        item = pktLine.decode(item);
+        item = decodeLine(item);
         if (item.caps) caps = item.caps;
         refs[item[1]] = item[0];
         return true;
@@ -114,23 +115,29 @@ function clone(url, sideband) {
     }, function (err) {
       if (err) return log(err);
       log({caps:caps,refs:refs});
-      var clientCaps = {};
+      var clientCaps = [];
       if (sideband) {
         if (caps["side-band-64k"]) {
-          clientCaps["side-band-64k"] = true;
+          clientCaps.push("side-band-64k");
         }
         else if (caps["side-band"]) {
-          clientCaps["side-band"] = true;
+          clientCaps.push("side-band");
         }
       }
-      output.write(null, ["want", refs.HEAD, pktLine.capList(clientCaps)].join(" ") + "\n");
+      output.write(null, ["want", refs.HEAD].concat(clientCaps).join(" ") + "\n");
       output.write(null, null);
       output.write(null, "done");
+      
+      chain
+        .source(sources.pack)
+        .map(logger('list-pack1'))
+        .push(listPack)
+        .map(logger('list-pack2'))
+        .sink(devNull);
 
-      devNull(sources.line);
-      devNull(sources.pack);
-      devNull(sources.progress);
-      devNull(sources.error);
+      // devNull(sources.line);
+      // devNull(sources.progress);
+      // devNull(sources.error);
     });
 
     return output;
@@ -180,14 +187,35 @@ function tube() {
     check();
   }
   function read(close, callback) {
-    if (closed) return callback(closed === true ? null : closed);
-    if (close) {
-      closed = close;
-      return callback();
-    }
+    if (close) closed = close;
+    if (closed) return callback();
     readQueue.push(callback);
     check();
   }
   read.write = write;
   return read;
+}
+
+
+
+// Decode a binary line
+// returns the data array with caps and request tagging if they are found.
+function decodeLine(line) {
+  var result = [];
+
+  if (line[line.length - 1] === "\0") {
+    result.request = true;
+    line = line.substr(0, line.length - 1);
+  }
+  line = line.trim();
+  var parts = line.split("\0");
+  result.push.apply(result, parts[0].split(" "));
+  if (parts[1]) {
+    result.caps = {};
+    parts[1].split(" ").forEach(function (cap) {
+      var pair = cap.split("=");
+      result.caps[pair[0]] = pair[1] ? pair[1] : true;
+    });
+  }
+  return result;
 }

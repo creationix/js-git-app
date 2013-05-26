@@ -9,7 +9,6 @@
     "min-stream-chrome": "~0.0.6",
     "dombuilder": "~0.1.2",
     "domlog": "~0.0.6",
-    "min-stream-pkt-line": "~0.0.6",
     "bops": "~0.0.6",
     "to-utf8": "0.0.1",
     "base64-js": "0.0.2"
