@@ -1,14 +1,16 @@
 "use strict";
 
+var domBuilder = require('dombuilder');
+var log = require('domlog');
+
 var tcp = require('min-stream-chrome/tcp.js');
 var chain = require('min-stream/chain.js');
 var demux = require('min-stream/demux.js');
-var domBuilder = require('dombuilder');
-var pktLine = require('js-git/pkt-line.js');
-var listPack = require('js-git/list-pack.js');
-// var objectify = require('git-objectify-pack');
-var log = require('domlog');
+
+var pktLine = require('git-pkt-line');
+var listPack = require('git-list-pack/min.js');
 var bops = require('bops');
+
 window.log = log;
 
 document.body.innerText = "";
@@ -135,19 +137,8 @@ function clone(url, sideband) {
       chain
         .source(sources.pack)
         .pull(listPack)
-        .map(function (item) {
-          if (!item) return item;
-          if (item.reference) {
-            item.reference = bops.to(item.reference, "hex");
-          }
-          else {
-            delete item.reference;
-          }
-          // item.data = bops.to(item.data);
-          return item;
-        })
         .map(logger('raw-object'))
-        // .pull(objectify(find))
+        // .push(objectify(find))
         // .map(logger('object'))
         .sink(devNull);
 
