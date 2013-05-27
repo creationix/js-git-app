@@ -9,6 +9,7 @@ var demux = require('min-stream/demux.js');
 
 var pktLine = require('git-pkt-line');
 var listPack = require('git-list-pack/min.js');
+var objectifyPack = require('git-objectify-pack/min.js');
 var bops = require('bops');
 
 window.log = log;
@@ -138,8 +139,8 @@ function clone(url, sideband) {
         .source(sources.pack)
         .pull(listPack)
         .map(logger('raw-object'))
-        // .push(objectify(find))
-        // .map(logger('object'))
+        .pull(objectifyPack(find))
+        .map(logger('object'))
         .sink(devNull);
 
       devNull(sources.line);
@@ -153,9 +154,8 @@ function clone(url, sideband) {
 }
 
 function find(oid, ready) {
-  var err = new Error("Can't find oid: " + oid);
-  log(err);
-  ready(err);
+  log("FIND", oid)
+  ready(null, null);
 }
 
 function logger(message) {
