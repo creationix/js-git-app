@@ -15,7 +15,7 @@
     "git-object-hash": "0.0.8",
     "git-object-tag": "0.0.5",
     "git-object-tree": "0.0.5",
-    "git-objectify-pack": "0.0.11",
+    "git-objectify-pack": "0.0.12",
     "git-pkt-line": "0.0.0",
     "git-to-js": "0.0.7",
     "inflate": "0.0.6",
