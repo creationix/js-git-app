@@ -9,7 +9,7 @@ var demux = require('min-stream/demux.js');
 
 var pktLine = require('git-pkt-line');
 var listPack = require('git-list-pack/min.js');
-var objectifyPack = require('git-objectify-pack/min.js');
+var hydratePack = require('git-hydrate-pack');
 var bops = require('bops');
 
 window.log = log;
@@ -134,13 +134,27 @@ function clone(url, sideband) {
       output.write(null, ["want", refs.HEAD].concat(clientCaps).join(" ") + "\n");
       output.write(null, null);
       output.write(null, "done");
-      
+
+      var seen = {};
+      var pending = {};
+      function find(oid, ready) {
+        if (seen[oid]) ready(null, seen[oid]);
+        else pending[oid] = ready;
+      }
+
       chain
         .source(sources.pack)
         .pull(listPack)
-        .map(logger('raw-object'))
-        .pull(objectifyPack(find))
-        .map(logger('object'))
+        .push(hydratePack(find))
+        .map(function (item) {
+          seen[item.hash] = item;
+          if (pending[item.hash]) {
+            pending[item.hash](null, item);
+          }
+          return item;
+        })
+        .map(parseObject)
+        .map(logger("object"))
         .sink(devNull);
 
       devNull(sources.line);
@@ -153,10 +167,62 @@ function clone(url, sideband) {
 
 }
 
-function find(oid, ready) {
-  log("FIND", oid)
-  ready(null, null);
+var parsers = {
+  tree: function (item) {
+    var list = [];
+    var data = item.data;
+    var hash;
+    var mode;
+    var path;
+    var i = 0, l = data.length;
+    while (i < l) {
+      mode = parseInt(bops.to(bops.subarray(data, i, i + 6)), 8);
+      i += 7;
+      var start = i;
+      while (data[i++]);
+      path = bops.to(bops.subarray(data, start, i - 1));
+      hash = bops.to(bops.subarray(data, i, i + 20), "hex");
+      i += 20;
+      list.push({
+        mode: mode,
+        path: path,
+        hash: hash
+      });
+    }
+    return list;
+  },
+  blob: function (item) {
+    return item.data;
+  },
+  commit: function (item) {
+    var data = item.data;
+    var i = 0, l = data.length;
+    var key;
+    var items = {};
+    while (i < l) {
+      var start = i;
+      while (data[i++] !== 0x20);
+      key = bops.to(bops.subarray(data, start, i - 1));
+      start = i;
+      while (data[i++] !== 0x0a);
+      items[key] = bops.to(bops.subarray(data, start, i - 1));
+      if (data[i] === 0x0a) {
+        items.message = bops.to(bops.subarray(data, i + 1));
+        break;
+      }
+    }
+    return items;
+  }
+};
+
+function parseObject(item) {
+  var obj = {
+    hash: item.hash
+  };
+  obj[item.type] = parsers[item.type](item);
+  return obj;
 }
+
 
 function logger(message) {
   return function (item) {
