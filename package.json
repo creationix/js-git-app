@@ -9,6 +9,7 @@
     "dombuilder": "0.1.2",
     "domlog": "0.0.6",
     "git-apply-delta": "0.0.7",
+    "git-hydrate-pack": "0.0.2",
     "git-list-pack": "0.0.10",
     "git-object-blob": "0.0.1",
     "git-object-commit": "0.0.6",
@@ -26,5 +27,3 @@
     "varint": "0.0.3"
   }
 }
-
-
