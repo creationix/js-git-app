@@ -176,9 +176,10 @@ var parsers = {
     var path;
     var i = 0, l = data.length;
     while (i < l) {
-      mode = parseInt(bops.to(bops.subarray(data, i, i + 6)), 8);
-      i += 7;
       var start = i;
+      while (data[i++] !== 0x20);
+      mode = parseInt(bops.to(bops.subarray(data, start, i - 1)), 8);
+      start = i;
       while (data[i++]);
       path = bops.to(bops.subarray(data, start, i - 1));
       hash = bops.to(bops.subarray(data, i, i + 20), "hex");
