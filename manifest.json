@@ -1,6 +1,6 @@
 {
-  "name": "JS-Git Chrome App",
-  "version": "0.1.0",
+  "name": "JS-Git Test App",
+  "version": "0.1.2",
   "manifest_version": 2,
   "offline_enabled": true,
   "description": "A js-git packaged app for chrome and chromebooks.",
