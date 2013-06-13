@@ -22,7 +22,7 @@ document.body.appendChild(domBuilder([
       evt.preventDefault();
       clone(this.url.value, this.sideband.checked);
     })},
-    ["input", {name: "url", size: 50, value: "git://github.com/creationix/conquest.git"}],
+    ["input", {name: "url", size: 50, value: "git://github.com/creationix/nvm.git"}],
     ["input", {type:"submit", value: "Clone!"}],
     ["label",
       ["input", {type:"checkbox", checked:true, name:"sideband"}],
@@ -87,13 +87,13 @@ function clone(url, sideband) {
 
     chain
       .source(socket.source)
-      .map(logger("<"))
+      // .map(logger("<"))
       .push(pktLine.deframer)
-      .map(logger("<-"))
+      // .map(logger("<-"))
       .pull(app)
-      .map(logger("->"))
+      // .map(logger("->"))
       .push(pktLine.framer)
-      .map(logger(">"))
+      // .map(logger(">"))
       .sink(socket.sink);
   }));
 
@@ -144,11 +144,11 @@ function clone(url, sideband) {
 
       chain
         .source(sources.pack)
-        .map(logger("rawpack"))
+        // .map(logger("rawpack"))
         .pull(listPack)
-        .map(logger("partlyparsed"))
+        // .map(logger("partlyparsed"))
         .push(hydratePack(find))
-        .map(logger("hydrated"))
+        // .map(logger("hydrated"))
         .map(function (item) {
           seen[item.hash] = item;
           if (pending[item.hash]) {
@@ -207,14 +207,19 @@ var parsers = {
     var data = item.data;
     var i = 0, l = data.length;
     var key;
-    var items = {};
+    var items = {parents:[]};
     while (i < l) {
       var start = i;
       while (data[i++] !== 0x20);
       key = bops.to(bops.subarray(data, start, i - 1));
       start = i;
       while (data[i++] !== 0x0a);
-      items[key] = bops.to(bops.subarray(data, start, i - 1));
+      var value = bops.to(bops.subarray(data, start, i - 1));
+      log({key:key,value:value});
+      if (key === "parent") {
+        items.parents.push(value);
+      }
+      else items[key] = value;
       if (data[i] === 0x0a) {
         items.message = bops.to(bops.subarray(data, i + 1));
         break;
