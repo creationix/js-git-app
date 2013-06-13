@@ -87,13 +87,13 @@ function clone(url, sideband) {
 
     chain
       .source(socket.source)
-//      .map(logger("<"))
+      .map(logger("<"))
       .push(pktLine.deframer)
-//      .map(logger("<-"))
+      .map(logger("<-"))
       .pull(app)
-//      .map(logger("->"))
+      .map(logger("->"))
       .push(pktLine.framer)
-//      .map(logger(">"))
+      .map(logger(">"))
       .sink(socket.sink);
   }));
 
@@ -144,8 +144,11 @@ function clone(url, sideband) {
 
       chain
         .source(sources.pack)
+        .map(logger("rawpack"))
         .pull(listPack)
+        .map(logger("partlyparsed"))
         .push(hydratePack(find))
+        .map(logger("hydrated"))
         .map(function (item) {
           seen[item.hash] = item;
           if (pending[item.hash]) {
@@ -158,7 +161,12 @@ function clone(url, sideband) {
         .sink(devNull);
 
       devNull(sources.line);
-      devNull(sources.progress);
+
+      chain
+        .source(sources.progress)
+        .map(logger("progress"))
+        .sink(devNull);
+
       devNull(sources.error);
     });
 
