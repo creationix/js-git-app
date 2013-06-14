@@ -5,25 +5,22 @@
   "dependencies": {
     "base64-js": "0.0.2",
     "bops": "0.0.6",
-    "chrome-app-module-loader": "0.0.1",
+    "chrome-app-module-loader": "0.0.2",
     "dombuilder": "0.1.2",
-    "domlog": "0.0.6",
+    "domlog": "0.0.7",
     "git-apply-delta": "0.0.7",
-    "git-hydrate-pack": "0.0.2",
+    "git-hydrate-pack": "0.0.5",
     "git-list-pack": "0.0.10",
-    "git-object-blob": "0.0.1",
-    "git-object-commit": "0.0.6",
-    "git-object-hash": "0.0.8",
-    "git-object-tag": "0.0.5",
-    "git-object-tree": "0.0.5",
-    "git-objectify-pack": "0.0.12",
     "git-pkt-line": "0.0.0",
-    "git-to-js": "0.0.7",
     "inflate": "0.0.6",
     "min-stream": "0.0.4",
     "min-stream-chrome": "0.0.6",
     "through": "2.2.7",
     "to-utf8": "0.0.1",
     "varint": "0.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/creationix/js-git-app.git"
   }
 }

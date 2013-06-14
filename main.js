@@ -22,7 +22,7 @@ document.body.appendChild(domBuilder([
       evt.preventDefault();
       clone(this.url.value, this.sideband.checked);
     })},
-    ["input", {name: "url", size: 50, value: "git://github.com/creationix/nvm.git"}],
+    ["input", {name: "url", size: 50, value: "git://github.com/creationix/conquest.git"}],
     ["input", {type:"submit", value: "Clone!"}],
     ["label",
       ["input", {type:"checkbox", checked:true, name:"sideband"}],
