@@ -215,7 +215,6 @@ var parsers = {
       start = i;
       while (data[i++] !== 0x0a);
       var value = bops.to(bops.subarray(data, start, i - 1));
-      log({key:key,value:value});
       if (key === "parent") {
         items.parents.push(value);
       }
